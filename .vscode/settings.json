@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "murmur2.h": "c",
+        "math.h": "c"
+    }
+}

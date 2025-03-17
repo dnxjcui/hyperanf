@@ -11,37 +11,37 @@ from HLL import HyperLogLog
 import copy
 
 
-def union(hll1, hll2):
-    """Merge two HyperLogLog counters and return a new instance."""
-    new_hll = copy.deepcopy(hll1)
-    new_hll.merge(hll2)
-    return new_hll
-
-
 def HyperANF(graph, precision=10):
-    """Implements the HyperANF algorithm for approximate neighborhood function calculation."""
+    """
+    Implements the HyperANF algorithm for approximate neighborhood function calculation.
+    Returns N(x, t), where N is the approximate neighborhood function at distance t. """
     # Initialize HyperLogLog counters for each node
-    c = {v: HyperLogLog(precision) for v in graph}
+    c = {v: HyperLogLog(precision, seed=42) for v in graph}
 
     # Add each node to its own counter
     for v in graph:
         c[v].add(str(v))  # Ensure consistent string representation
 
     t = 0
+    NFs = []
+    node_pairs = []
+    denom = len(c) * (len(c) - 1) / 2
+    avg_graph_distance = 0
     while True:
         s = sum(c[v].cardinality() for v in graph)  # Use .cardinality() for estimated cardinality
-        print(f"Step {t}: Neighborhood size sum = {s}")
+
+        NFs.append(s)
+        node_pairs.append(NFs[-1] - NFs[-2] if len(NFs) > 1 else NFs[-1])
 
         changed = False
-        new_c = {v: HyperLogLog(precision) for v in graph}  # Create new instances (?)
+        new_c = copy.deepcopy(c)    # Create new instances for copying
 
         # Update each node's counter by merging neighbors
         for v in graph:
-            m = copy.deepcopy(c[v])
+            m = new_c[v]
             for w in graph[v]:
-                m = union(m, c[w])
+                m.merge(c[w])
 
-            new_c[v] = m
             if c[v].cardinality() != m.cardinality():  # Check cardinality difference
                 changed = True
 
@@ -51,4 +51,6 @@ def HyperANF(graph, precision=10):
         if not changed:
             break  # Stop when no counter changes
 
-    return {v: c[v].cardinality() for v in graph}  # Use .cardinality() for final estimates
+    # returns the avg graph distance
+    avg_graph_distance = sum([(i + 1) * node_pairs[i] / sum(node_pairs) for i in range(len(node_pairs))])
+    return avg_graph_distance
